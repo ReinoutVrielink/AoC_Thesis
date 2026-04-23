@@ -69,3 +69,14 @@ z3 (& Python)
 # Als ik kijk naar deze output zie ik dat de oplossingen eigenlijk allemaal in python zijn
 # Ik hoef dus niet te filteren!
 
+# 23-4/2026 - Heb net de preprocessing.py file geschreven, waarin ik de solutions.json file heb opgeschoond en opgesplitst in individuele oplossingen (part1/part2)
+# lege oplossingen heb ik verwijderd. Ik sla deze op in preprocessed_solutions.json. 
+# Nu wil ik even kijken hoeveel oplossingen er in deze nieuwe file zitten, om te checken of het preprocessen goed is gegaan
+with open('data/solutions_with_features.json', 'r') as f:
+    solutions_with_features = json.load(f)
+preprocessed_df = pd.DataFrame(solutions_with_features)
+print(len(df))
+print(len(preprocessed_df['sol_id']))
+
+# there are 7199 solutions in the preprocessed file after splitting part1/part2 and removing empty solutions
+# before preprocessing there were 6163 entries

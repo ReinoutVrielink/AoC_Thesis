@@ -1,6 +1,7 @@
 import json
 from radon.complexity import cc_visit
-from radon.metrics import h_visit
+from radon.metrics import h_visit, mi_visit
+from radon.raw import analyze
 # Radon documentation: https://radon.readthedocs.io/en/latest/api.html, https://github.com/rubik/radon
 
 def extract_radon_features():
@@ -34,11 +35,24 @@ def extract_radon_features():
             solution_with_features["effort"] = halstead.total.effort # estimated effort to write or understand the code
             solution_with_features["time"] = halstead.total.time # estimated time to program in seconds. Assumption is 18 seconds per mental operation
             solution_with_features["bugs"] = halstead.total.bugs # estimated number of bugs in the code
+            # maintainability index
+            mi_score = mi_visit(code, multi=True)
+            solution_with_features["maintainability_index"] = mi_score
+            # Raw metrics
+            raw_metrics = analyze(code)
+            solution_with_features["loc"] = raw_metrics.loc  # Total lines of code
+            solution_with_features["lloc"] = raw_metrics.lloc  # Logical lines of code
+            solution_with_features["sloc"] = raw_metrics.sloc  # Source lines of code
+            solution_with_features["comments_count"] = raw_metrics.comments  # Total comment lines
+            solution_with_features["multi_strings"] = raw_metrics.multi  # Multi-line strings (docstrings)
+            solution_with_features["blank_lines"] = raw_metrics.blank  # Blank lines
+            solution_with_features["single_comments"] = raw_metrics.single_comments  # Lines that are only comments
+
         except Exception as e:
             # set all metrics to None if any parsing fails
             solution_with_features["cyclomatic_complexity"] = None
             solution_with_features["avg_function_complexity"] = None
-            solution_with_features["num_functions"] = 0
+            solution_with_features["num_functions"] = None
             solution_with_features["h1"] = None
             solution_with_features["h2"] = None
             solution_with_features["N1"] = None
@@ -51,6 +65,14 @@ def extract_radon_features():
             solution_with_features["effort"] = None
             solution_with_features["time"] = None
             solution_with_features["bugs"] = None
+            solution_with_features["loc"] = None
+            solution_with_features["lloc"] = None
+            solution_with_features["sloc"] = None
+            solution_with_features["comments_count"] = None
+            solution_with_features["multi_strings"] = None
+            solution_with_features["blank_lines"] = None
+            solution_with_features["single_comments"] = None
+            solution_with_features["maintainability_index"] = None
         solutions_with_features.append(solution_with_features)
     
     with open('data/solutions_with_features.json', 'w') as f:

@@ -23,7 +23,19 @@ These were the lexical features they proposed:
 14. Consistent application of curly brackets around one-line branches
 15. Level of indentation correctness
 
+These are the other features they proposed 
+Syntactic Features (2):
+16. Degree of exploitation of language syntax (various for loops, lambdas)
+17. Depth of references to fields and methods (max, 80th percentile)
+Semantic Features (7):
+18. Number of methods in a class (average, maximum, 80th percentile)
+19. Number of used switch instructions ratio
+20. Number of separated logic blocks within methods ratio
+21. Number of code duplications ratio
+22. Maximum nesting depth of instructions
 
 
+Consistency in using curly brackets around one-line branches of code is implemented in two variants so it gives rise to two features. 
+Number of consecutive lines with aligned characters represents four features, as it is computed separately for four groups of characters.
 
 """

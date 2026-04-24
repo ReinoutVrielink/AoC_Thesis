@@ -47,6 +47,9 @@ def extract_radon_features():
             solution_with_features["multi_strings"] = raw_metrics.multi  # Multi-line strings (docstrings)
             solution_with_features["blank_lines"] = raw_metrics.blank  # Blank lines
             solution_with_features["single_comments"] = raw_metrics.single_comments  # Lines that are only comments
+            # This underneath is feature 5 (defined all features in lexical_analysis.py): Comment to code ratio from the paper by Biel et al. (2023)
+            solution_with_features["comment_ratio"] = (raw_metrics.comments + raw_metrics.multi) / raw_metrics.sloc if raw_metrics.sloc > 0 else 0
+
 
         except Exception as e:
             # set all metrics to None if any parsing fails
@@ -80,3 +83,13 @@ def extract_radon_features():
     
     print(f"Extracted radon features for {len(solutions_with_features)} solutions")
     return solutions_with_features
+
+def extract_ast_features():
+    with open('data/preprocessed_solutions.json', 'r') as f:
+        all_individual_solutions = json.load(f)
+    solutions_with_features = []
+    for solution in all_individual_solutions:
+        code = solution['code']
+        solution_with_features = {**solution}
+        try:
+        except Exception as e:

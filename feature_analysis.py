@@ -2,6 +2,7 @@ import json
 from radon.complexity import cc_visit
 from radon.metrics import h_visit, mi_visit
 from radon.raw import analyze
+import ast
 # Radon documentation: https://radon.readthedocs.io/en/latest/api.html, https://github.com/rubik/radon
 
 def extract_radon_features():
@@ -87,9 +88,33 @@ def extract_radon_features():
 def extract_ast_features():
     with open('data/preprocessed_solutions.json', 'r') as f:
         all_individual_solutions = json.load(f)
-    solutions_with_features = []
+    solutions_with_features = [] 
     for solution in all_individual_solutions:
         code = solution['code']
         solution_with_features = {**solution}
+        
         try:
+            # parsing code into ast tree. just want to look if it works so i only extract two simple features: number of variables and average variable name length. Will expand this later
+            tree = ast.parse(code)
+            variable_names = [
+                node.id for node in ast.walk(tree) 
+                if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
+            ]
+            solution_with_features["num_variables"] = len(variable_names)
+            solution_with_features["avg_variable_name_length"] = (
+                sum(len(name) for name in variable_names) / len(variable_names) 
+                if variable_names else 0
+            )
         except Exception as e:
+            solution_with_features["num_variables"] = None
+            solution_with_features["avg_variable_name_length"] = None
+            
+        solutions_with_features.append(solution_with_features)
+    
+    # Save to a different file first, might concatenate them later
+    with open('data/ast_features.json', 'w') as f:
+        json.dump(solutions_with_features, f)
+        
+    print(f"Extracted AST features for {len(solutions_with_features)} solutions")
+    return solutions_with_features
+            

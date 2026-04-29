@@ -25,7 +25,6 @@ def preprocessing():
             all_individual_solutions.append(solution_metadata)
     return all_individual_solutions
 
-
 all_individual_solutions = preprocessing()
 with open('data/preprocessed_solutions.json', 'w') as f:
     json.dump(all_individual_solutions, f)

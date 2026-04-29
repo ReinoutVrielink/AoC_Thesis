@@ -33,3 +33,15 @@ Consistency in using curly brackets around one-line branches of code is implemen
 Number of consecutive lines with aligned characters represents four features, as it is computed separately for four groups of characters.
 
 In the code I will comment when a certain feature is computed
+
+Not all features are possible or logical to compute.
+These features are:
+Commented-out code ratio (#6): Distinguishing between descriptive text and commented out code is too unreliable without advanced NLP
+English vs. other languages (#11): There is not enough linguistic variety in the data
+Preserving naming conventions (#12): The small solution scripts lack the volume of variables needed to prove a coder is being consistent in their naming
+Curly bracket placement (#13): Python doesn't use curly brackets for blocks
+Brackets around one-liners (#14): Not appropriate for python data
+Indentation correctness (#15): Python requires perfect indentation to execute so if the code works, the indentation is by definition correct
+Methods per class (#18): AoC solutions are usually procedural scripts, there are very few classes to analyze
+Switch instruction ratio (#19): Python's match/case is not used that much compared to standard if/else.
+Code duplication ratio (#21): The logic and code is usually too short and focused to show the copy-paste patterns that you might be able to find in large software projects

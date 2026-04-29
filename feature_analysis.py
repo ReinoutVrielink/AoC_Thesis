@@ -3,6 +3,7 @@ from radon.complexity import cc_visit
 from radon.metrics import h_visit, mi_visit
 from radon.raw import analyze
 import ast
+import re
 # Radon documentation: https://radon.readthedocs.io/en/latest/api.html, https://github.com/rubik/radon
 
 def extract_radon_features():
@@ -85,6 +86,7 @@ def extract_radon_features():
     print(f"Extracted radon features for {len(solutions_with_features)} solutions")
     return solutions_with_features
 
+
 def extract_ast_features():
     with open('data/preprocessed_solutions.json', 'r') as f:
         all_individual_solutions = json.load(f)
@@ -92,12 +94,12 @@ def extract_ast_features():
     for solution in all_individual_solutions:
         code = solution['code']
         solution_with_features = {**solution}
-        
         try:
-            # parsing code into ast tree. just want to look if it works so i only extract two simple features: number of variables and average variable name length. Will expand this later
             tree = ast.parse(code)
+            all_nodes = list(ast.walk(tree))
+            # variable assignment features
             variable_names = [
-                node.id for node in ast.walk(tree) 
+                node.id for node in all_nodes 
                 if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
             ]
             solution_with_features["num_variables"] = len(variable_names)
@@ -105,16 +107,119 @@ def extract_ast_features():
                 sum(len(name) for name in variable_names) / len(variable_names) 
                 if variable_names else 0
             )
-        except Exception as e:
-            solution_with_features["num_variables"] = None
-            solution_with_features["avg_variable_name_length"] = None
-            
+            # identifier features
+            identifiers = [node.id for node in all_nodes if isinstance(node, ast.Name)]
+            solution_with_features["unique_identifiers"] = len(set(identifiers))
+            solution_with_features["avg_identifier_length"] = (
+                sum(len(i) for i in identifiers) / len(identifiers) if identifiers else 0
+            )
+            # string literal features
+            string_literals = [
+                node.value for node in all_nodes 
+                if (isinstance(node, ast.Constant) and isinstance(node.value, str)) or isinstance(node, ast.Str)
+            ]
+            solution_with_features["avg_string_literal_len"] = (
+                sum(len(s) for s in string_literals) / len(string_literals) if string_literals else 0
+            )
+            # for loop counter
+            solution_with_features["for_loop_count"] = len([n for n in all_nodes if isinstance(n, ast.For)])
+        except Exception:
+            keys = [
+                "num_variables", "avg_variable_name_length", "unique_identifiers", 
+                "avg_identifier_length", "avg_string_literal_len", "for_loop_count"
+            ]
+            for key in keys:
+                solution_with_features[key] = None
         solutions_with_features.append(solution_with_features)
-    
-    # Save to a different file first, might concatenate them later
     with open('data/ast_features.json', 'w') as f:
         json.dump(solutions_with_features, f)
-        
     print(f"Extracted AST features for {len(solutions_with_features)} solutions")
     return solutions_with_features
-            
+
+def extract_stylistic_features():
+    with open('data/preprocessed_solutions.json', 'r') as f:
+        all_individual_solutions = json.load(f)
+    # Adding some simpler features that are more about style and formatting
+    # These features are inspired by the paper by Biel et al. (2023) and the thesis by Sams et al. (2025)
+    # For identifying code stylometry in the thesis by Sams et al. (2025) the top 10 overall important stylometric features consisted of:
+    """
+    1. The amount of lines that have source code written in them
+    2. Amount of characters in longest line in file
+    3. Total amount of lines in the file
+    4. Amount of unique identifiers (will be done in ast features)
+    5. Halstead Volume (already calculated in Radon features)
+    6. The number of parenthesis characters per total characters
+    7. The average length of string literals in the code (will be done in ast)
+    8. Number of loop constructs with the keyword 'for' (will be done in ast)
+    9. Average line length in characters
+    10. mean size of identifiers (will also be done in ast)
+    """
+    solutions_with_features = []
+    feature_keys = [
+        "source_code_lines",      # 1.
+        "max_line_length",        # 2.
+        "total_lines",            # 3.
+        "parenthesis_ratio",      # 6.
+        "avg_line_length",        # 9.
+    ]
+    for solution in all_individual_solutions:
+        code = solution['code']
+        solution_with_features = {**solution}
+        try:
+            lines = code.splitlines()
+            if not lines:
+                for key in feature_keys:
+                    solution_with_features[key] = 0
+            else:
+                # Features 2, 3, 9
+                line_lengths = [len(l) for l in lines]
+                solution_with_features["total_lines"] = len(lines)
+                solution_with_features["max_line_length"] = max(line_lengths)
+                solution_with_features["avg_line_length"] = sum(line_lengths) / len(lines)
+                # feature 1 
+                src_lines = [l for l in lines if l.strip() and not l.strip().startswith('#')]
+                solution_with_features["source_code_lines"] = len(src_lines)
+                # feature 6
+                if len(code) > 0:
+                    parens_count = code.count('(') + code.count(')')
+                    solution_with_features["parenthesis_ratio"] = parens_count / len(code)
+                else:
+                    solution_with_features["parenthesis_ratio"] = 0
+        except Exception as e:
+            for key in feature_keys:
+                solution_with_features[key] = None
+        solutions_with_features.append(solution_with_features)
+    with open('data/stylistic_features.json', 'w') as f:
+        json.dump(solutions_with_features, f)
+    print(f"Extracted stylistic features for {len(solutions_with_features)} solutions")
+    return solutions_with_features
+
+# Combine all features into one dataset
+# I don't think this is the most effective way to do the analysis but for now I keep it
+# I did it this way because I just started this script by doing the radon features and ast features in seperate functions
+# and then I thought it would be easy to just merge the three datasets together in a separate function
+def extract_all_features():
+    radon_data = extract_radon_features()
+    ast_data = extract_ast_features()
+    style_data = extract_stylistic_features()
+    combined_map = {}
+    def merge_into_map(dataset):
+        for entry in dataset:
+            sid = entry['sol_id']
+            if sid not in combined_map:
+                combined_map[sid] = {
+                    "sol_id": sid,
+                    "author": entry.get("author"),
+                    "year": entry.get("year"),
+                    "day": entry.get("day"),
+                    "part": entry.get("part"),
+                    "code": entry.get("code")
+                }
+            combined_map[sid].update(entry)
+    merge_into_map(radon_data)
+    merge_into_map(ast_data)
+    merge_into_map(style_data)
+    final_dataset = list(combined_map.values())
+    with open('data/combined_features.json', 'w') as f:
+        json.dump(final_dataset, f)
+    return final_dataset

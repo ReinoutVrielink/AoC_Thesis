@@ -1,5 +1,7 @@
 import json
 import pandas as pd
+from feature_analysis import extract_all_features
+
 # 20/4/2026
 # Hallo! Dit is mijn eerste file. In deze file inspecteer ik de data om te kijken waarmee ik aan het werken ben
 
@@ -80,3 +82,9 @@ print(len(preprocessed_df['sol_id']))
 
 # there are 7199 solutions in the preprocessed file after splitting part1/part2 and removing empty solutions
 # before preprocessing there were 6163 entries
+
+# 29/4/2026 - inspecting the combined radon, ast, and custom features file
+pd.set_option('display.max_columns', None) # first time i printed the metadata for first 10 solution it was cut off
+full_data = extract_all_features()
+full_df = pd.DataFrame(full_data)
+print(full_df.head(10))

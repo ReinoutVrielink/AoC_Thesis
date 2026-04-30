@@ -158,8 +158,6 @@ print(f"Total solutions with at least one missing value: {total_broken_rows} out
 """
 Total solutions with at least one missing value: 1556 out of 6983
 """
-# i'll remove the rows with missing values for now, to be able to do some analysis on the remaining data
-full_df_clean = full_df.dropna()
-top_10_features = full_df_clean[selected_features]
+# i'll remove the rows with missing values for now in the preprocessing file, to be able to do some analysis on the remaining data
 
 # I want to try a simple k means clustering on top 10 features to see if there are any interesting clusters in the data, but first I need to normalize the features

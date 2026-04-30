@@ -220,7 +220,10 @@ def extract_all_features():
     merge_into_map(radon_data)
     merge_into_map(ast_data)
     merge_into_map(style_data)
+    print("Combined features for all datasets")
     final_dataset = list(combined_map.values())
     with open('data/combined_features.json', 'w') as f:
         json.dump(final_dataset, f)
     return final_dataset
+
+extract_all_features()

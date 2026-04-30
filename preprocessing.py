@@ -1,5 +1,6 @@
 import json
-
+import pandas as pd
+from feature_analysis import extract_all_features
 def preprocessing():
     with open('data/solutions.json', 'r') as f:
         data = json.load(f)
@@ -25,7 +26,3 @@ def preprocessing():
             } 
             all_individual_solutions.append(solution_metadata)
     return all_individual_solutions
-
-all_individual_solutions = preprocessing()
-with open('data/preprocessed_solutions.json', 'w') as f:
-    json.dump(all_individual_solutions, f)

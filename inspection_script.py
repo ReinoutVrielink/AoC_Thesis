@@ -1,7 +1,8 @@
 import json
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
 from feature_analysis import extract_all_features
-
+import ast
 # 20/4/2026
 # Hallo! Dit is mijn eerste file. In deze file inspecteer ik de data om te kijken waarmee ik aan het werken ben
 
@@ -87,4 +88,78 @@ print(len(preprocessed_df['sol_id']))
 pd.set_option('display.max_columns', None) # first time i printed the metadata for first 10 solution it was cut off
 full_data = extract_all_features()
 full_df = pd.DataFrame(full_data)
-print(full_df.head(10))
+full_df['puzzle'] = 'Day ' + full_df['day'].astype(str)
+selected_features = [
+    'puzzle',
+    'sol_id',
+    'source_code_lines',
+    'max_line_length',
+    'total_lines',
+    'unique_identifiers',
+    'volume',
+    'parenthesis_ratio',
+    'avg_string_literal_len',
+    'for_loop_count',
+    'avg_line_length',
+    'avg_identifier_length'
+]
+"""
+this is the output of the code above:
+extracted stylistic features for 7199 solutions
+puzzle                        sol_id  source_code_lines  max_line_length  total_lines  unique_identifiers     volume  parenthesis_ratio  avg_string_literal_len  for_loop_count  avg_line_length  avg_identifier_length
+ Day 1          masasin_2015_1_part1                 13               60           17                11.0  68.532389           0.043764                9.571429             1.0        25.941176               7.142857
+ Day 1       TheKrumpet_2015_1_part1                  2               35            2                 1.0   4.754888           0.177778                1.000000             0.0        22.000000               1.000000
+ Day 2           stuque_2015_2_part1                 21               40           23                 NaN        NaN           0.056940                     NaN             NaN        23.478261                    NaN
+ Day 2        [deleted]_2015_2_part1                 96               75          129                27.0  79.954453           0.026991              267.800000             2.0        28.302326               6.803279
+ Day 2           jgomo3_2015_2_part1                 14               64           19                22.0  27.000000           0.073218                7.000000             1.0        26.368421               4.771429
+ Day 2      streetster__2015_2_part1                 14               69           20                 NaN        NaN           0.045455                     NaN             NaN        25.450000                    NaN
+ Day 2 RedditWithBoners_2015_2_part1                  8               89           13                14.0 150.117300           0.076190                1.666667             0.0        23.307692               2.545455
+ Day 2        sleepyams_2015_2_part1                 25               72           34                 NaN        NaN           0.054795                     NaN             NaN        18.352941                    NaN
+ Day 2        sleepyams_2015_2_part2                 25               72           34                 NaN        NaN           0.054795                     NaN             NaN        18.352941                    NaN
+ Day 2          masasin_2015_2_part1                 13               62           18                16.0 220.078200           0.051376               14.500000             1.0        29.333333               4.837838
+
+ We can see that some solutions have NaN values for unique_identifiers and volume, which indicates that there was an issue with parsing those solutions
+"""
+
+""""
+Example of a solution that failed:
+def day2_1():
+    total = 0
+    for line in open('day2input.txt'):
+        l, w, h = line.split('x')
+        l, w, h = int(l), int(w), int(h)
+        area = 2*l*w + 2*w*h + 2*h*l
+        slack = min(l*w, w*h, h*l)
+        total += area + slack
+    print total
+
+def day2_2():
+    total = 0
+    for line in open('day2input.txt'):
+        l, w, h = line.split('x')
+        l, w, h = int(l), int(w), int(h)
+        ribbon = 2 * min(l+w, w+h, h+l)
+        bow = l*w*h
+        total += ribbon + bow
+    print total
+
+if __name__ == '__main__':
+    day2_1()
+    day2_2()
+
+when we look at this code we see that it does 'print total' instead of 'print(total)', which is a syntax error in Python 3
+this is likely why the parsing failed and we got NaN values
+"""
+
+# This returns the number of rows that have at least one missing value
+total_broken_rows = full_df.isna().any(axis=1).sum()
+
+print(f"Total solutions with at least one missing value: {total_broken_rows} out of {len(full_df)}")
+"""
+Total solutions with at least one missing value: 1556 out of 6983
+"""
+# i'll remove the rows with missing values for now, to be able to do some analysis on the remaining data
+full_df_clean = full_df.dropna()
+top_10_features = full_df_clean[selected_features]
+
+# I want to try a simple k means clustering on top 10 features to see if there are any interesting clusters in the data, but first I need to normalize the features

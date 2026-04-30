@@ -213,7 +213,8 @@ def extract_all_features():
                     "year": entry.get("year"),
                     "day": entry.get("day"),
                     "part": entry.get("part"),
-                    "code": entry.get("code")
+                    "code": entry.get("code"),
+                    "language": entry.get("language")
                 }
             combined_map[sid].update(entry)
     merge_into_map(radon_data)

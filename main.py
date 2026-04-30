@@ -1,10 +1,11 @@
 import json
-from feature_analysis import extract_radon_features, extract_ast_features
+from feature_analysis import extract_all_features
 import pandas as pd
 
 def main():
-    # extract_radon_features()
-    extract_ast_features()
+    extract_all_features()
+    """
+    #extract_ast_features()
     with open('data/solutions_with_features.json', 'r') as f:
         solutions_with_features = json.load(f)
     with open('data/ast_features.json', 'r') as f:
@@ -20,14 +21,14 @@ def main():
     df = df.head(50)
     # Create puzzle column
     df['puzzle'] = 'Day ' + df['day'].astype(str)
-    print("\nComplexity metrics")
-    print(df[['puzzle', 'cyclomatic_complexity', 'avg_function_complexity', 'num_functions', 'sol_id']].to_string(index=False))
-    print("\nHalstead metrics + maintainability index")
-    print(df[['puzzle', 'volume', 'difficulty', 'effort', 'bugs', 'vocabulary', 'maintainability_index', 'sol_id']].to_string(index=False))
-    print("\nRaw metrics")
-    print(df[['puzzle', 'loc', 'lloc', 'sloc', 'comments_count', 'multi_strings', 'blank_lines', 'single_comments', 'sol_id']].to_string(index=False))
-    df_ast_display = df_ast.head(50)
-    print("\n AST features")
-    print(df_ast_display[['puzzle', 'sol_id', 'num_variables', 'avg_variable_name_length']].to_string(index=False))
+    """
+    #print("\nComplexity metrics")
+    #print(df[['puzzle', 'cyclomatic_complexity', 'avg_function_complexity', 'num_functions', 'sol_id']].to_string(index=False))
+    #print("\nHalstead metrics + maintainability index")
+    #print(df[['puzzle', 'volume', 'difficulty', 'effort', 'bugs', 'vocabulary', 'maintainability_index', 'sol_id']].to_string(index=False))
+    #print("\nRaw metrics")
+    #print(df[['puzzle', 'loc', 'lloc', 'sloc', 'comments_count', 'multi_strings', 'blank_lines', 'single_comments', 'sol_id']].to_string(index=False))
+    #print("\n AST features")
+    #print(df_ast[['puzzle', 'sol_id', 'num_variables', 'avg_variable_name_length']].to_string(index=False))
 if __name__ == "__main__":
     main()

@@ -18,6 +18,7 @@ def preprocessing():
                 "author": entry["author"],
                 "year": entry["year"],
                 "day": entry["day"],
+                "language": entry["language"],
                 "part": part_name,
                 "code": code_content,
                 "sol_id": f"{entry['author']}_{entry['year']}_{entry['day']}_{part_name}"

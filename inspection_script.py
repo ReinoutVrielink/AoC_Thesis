@@ -169,7 +169,7 @@ Total solutions with at least one missing value: 1556 out of 6983
 #df_day = df[df['day'] == 3]
 #first_row = df_day.iloc[0]
 #print(first_row)
-#lustered_all = run_kmeans(df_day, n_clusters=3)
+#clustered_all = run_kmeans(df_day, n_clusters=3)
 #print("\nCluster distribution:")
 #print(clustered_all['cluster'].value_counts().sort_index())
 
@@ -188,3 +188,8 @@ Total solutions with at least one missing value: 1556 out of 6983
 # loc <-> total_lines:   1.000
 # effort <-> time:   1.000
 # volume <-> bugs:   1.000
+with open('data/combined_features.json', 'r') as f:
+        data = json.load(f)
+df = pd.DataFrame(data)
+df_day = df[df['day'] == 3]
+run_kmeans(df_day, n_clusters=3)

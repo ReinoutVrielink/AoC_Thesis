@@ -68,8 +68,8 @@ def extract_radon_features():
             solution_with_features["volume"] = None
             solution_with_features["difficulty"] = None
             solution_with_features["effort"] = None
-            solution_with_features["time"] = None
-            solution_with_features["bugs"] = None
+            #solution_with_features["time"] = None
+            #solution_with_features["bugs"] = None
             solution_with_features["loc"] = None
             solution_with_features["lloc"] = None
             solution_with_features["sloc"] = None

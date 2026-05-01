@@ -1,22 +1,23 @@
 import json
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
 from feature_analysis import extract_all_features
 import ast
+from clustering import run_kmeans, get_feature_columns
+
 # 20/4/2026
 # Hallo! Dit is mijn eerste file. In deze file inspecteer ik de data om te kijken waarmee ik aan het werken ben
 
 
 # Ik kijk eerst even naar de solutions.json file, die in de drive van onze scriptie stond
 # Ik gebruik hier pandas voor, dit hebben we veel gebruikt in onze studie en is efficiënt
-with open('data/solutions.json', 'r') as f:
-    df = pd.DataFrame(json.load(f))
+#with open('data/solutions.json', 'r') as f:
+#    df = pd.DataFrame(json.load(f))
 
 # Ik wil even kijken hoeveel files er zijn in welke jaren, en hoeveel daarvan in Python geschreven zijn
 # Eerst wil ik even checken welke talen er überhaupt in de solutions.json file zitten
-print("Alle talen in de dataset:")
-for taal in sorted(df['language'].unique().astype(str)):
-    print(taal)
+#print("Alle talen in de dataset:")
+#for taal in sorted(df['language'].unique().astype(str)):
+#    print(taal)
 # Dit is de output:
 """
 Alle talen in de dataset:
@@ -75,21 +76,21 @@ z3 (& Python)
 # 23-4/2026 - Heb net de preprocessing.py file geschreven, waarin ik de solutions.json file heb opgeschoond en opgesplitst in individuele oplossingen (part1/part2)
 # lege oplossingen heb ik verwijderd. Ik sla deze op in preprocessed_solutions.json. 
 # Nu wil ik even kijken hoeveel oplossingen er in deze nieuwe file zitten, om te checken of het preprocessen goed is gegaan
-with open('data/solutions_with_features.json', 'r') as f:
-    solutions_with_features = json.load(f)
-preprocessed_df = pd.DataFrame(solutions_with_features)
-print(len(df))
-print(len(preprocessed_df['sol_id']))
+#with open('data/solutions_with_features.json', 'r') as f:
+#    solutions_with_features = json.load(f)
+#preprocessed_df = pd.DataFrame(solutions_with_features)
+#print(len(df))
+#print(len(preprocessed_df['sol_id']))
 
 # there are 7199 solutions in the preprocessed file after splitting part1/part2 and removing empty solutions
 # before preprocessing there were 6163 entries
 
 # 29/4/2026 - inspecting the combined radon, ast, and custom features file
-pd.set_option('display.max_columns', None) # first time i printed the metadata for first 10 solution it was cut off
-full_data = extract_all_features()
-full_df = pd.DataFrame(full_data)
-full_df['puzzle'] = 'Day ' + full_df['day'].astype(str)
-selected_features = [
+#pd.set_option('display.max_columns', None) # first time i printed the metadata for first 10 solution it was cut off
+#full_data = extract_all_features()
+#full_df = pd.DataFrame(full_data)
+#full_df['puzzle'] = 'Day ' + full_df['day'].astype(str)
+"""selected_features = [
     'puzzle',
     'sol_id',
     'source_code_lines',
@@ -103,7 +104,7 @@ selected_features = [
     'avg_line_length',
     'avg_identifier_length'
 ]
-"""
+
 this is the output of the code above:
 extracted stylistic features for 7199 solutions
 puzzle                        sol_id  source_code_lines  max_line_length  total_lines  unique_identifiers     volume  parenthesis_ratio  avg_string_literal_len  for_loop_count  avg_line_length  avg_identifier_length
@@ -152,12 +153,38 @@ this is likely why the parsing failed and we got NaN values
 """
 
 # This returns the number of rows that have at least one missing value
-total_broken_rows = full_df.isna().any(axis=1).sum()
+#total_broken_rows = full_df.isna().any(axis=1).sum()
 
-print(f"Total solutions with at least one missing value: {total_broken_rows} out of {len(full_df)}")
+#print(f"Total solutions with at least one missing value: {total_broken_rows} out of {len(full_df)}")
 """
 Total solutions with at least one missing value: 1556 out of 6983
 """
 # i'll remove the rows with missing values for now in the preprocessing file, to be able to do some analysis on the remaining data
 
 # I want to try a simple k means clustering on top 10 features to see if there are any interesting clusters in the data, but first I need to normalize the features
+# 1-5-2026. testing clustering
+#with open('data/combined_features.json', 'r') as f:
+#        data = json.load(f)
+#df = pd.DataFrame(data)
+#df_day = df[df['day'] == 3]
+#first_row = df_day.iloc[0]
+#print(first_row)
+#lustered_all = run_kmeans(df_day, n_clusters=3)
+#print("\nCluster distribution:")
+#print(clustered_all['cluster'].value_counts().sort_index())
+
+# the clustering wasn't super good but also not very bad. 
+# first of all i think i want to focus a bit more on features with more variance.
+# also i think the dataset still has some problems because there is quite some data that had NaN values
+# I asked Claude to inspect my data a bit more, and as I found out before, there are some solutions that are coded in python 2 syntax. this causes problems
+# I also added another code block to inspect the outcomes of the clustering. 
+# This is a lot of code (generated by Claude), so I removed it after running. The results of this code are provided in the documentation file of this thesis
+# To keep it short the outcome showed that:
+# 1. parenthesis_ratio has variance 0.00 (adds noise)
+# 2. avg_identifier_length has very low variance (3.00)
+# 3. the clustering based on the 10 most effective features in the paper by Sams et al. is not significantly better than clustering on other features 
+# 4. there are some other redundant features like source_code_lines (there is already sloc in radon features)
+# the following features have very high correlation (above 0.95) and are redundant
+# loc <-> total_lines:   1.000
+# effort <-> time:   1.000
+# volume <-> bugs:   1.000

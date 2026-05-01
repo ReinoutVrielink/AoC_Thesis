@@ -35,8 +35,8 @@ def extract_radon_features():
             solution_with_features["volume"] = halstead.total.volume # estimated amount of information in the code
             solution_with_features["difficulty"] = halstead.total.difficulty # estimated difficulty to write or understand the code
             solution_with_features["effort"] = halstead.total.effort # estimated effort to write or understand the code
-            solution_with_features["time"] = halstead.total.time # estimated time to program in seconds. Assumption is 18 seconds per mental operation
-            solution_with_features["bugs"] = halstead.total.bugs # estimated number of bugs in the code
+            # solution_with_features["time"] = halstead.total.time # Time has a correlation score of 1.00 with effort, so I won't use this one
+            # solution_with_features["bugs"] = halstead.total.bugs # 1/5/2026: won't use this one because it has a correlation score of 1.00 with volume
             # maintainability index
             mi_score = mi_visit(code, multi=True)
             solution_with_features["maintainability_index"] = mi_score
@@ -156,10 +156,11 @@ def extract_stylistic_features():
     """
     solutions_with_features = []
     feature_keys = [
-        "source_code_lines",      # 1.
+        #"source_code_lines",      # 1.
         "max_line_length",        # 2.
-        "total_lines",            # 3.
-        "parenthesis_ratio",      # 6.
+        #"total_lines",            # 3.
+        #"parenthesis_ratio",      # 6. 
+        # 1/5/2026. commented out both parenthesis ratio (variance of 0.00), source code lines and total lines (both redundant)
         "avg_line_length",        # 9.
     ]
     for solution in all_individual_solutions:
@@ -173,18 +174,18 @@ def extract_stylistic_features():
             else:
                 # Features 2, 3, 9
                 line_lengths = [len(l) for l in lines]
-                solution_with_features["total_lines"] = len(lines)
+                #solution_with_features["total_lines"] = len(lines)
                 solution_with_features["max_line_length"] = max(line_lengths)
                 solution_with_features["avg_line_length"] = sum(line_lengths) / len(lines)
-                # feature 1 
-                src_lines = [l for l in lines if l.strip() and not l.strip().startswith('#')]
-                solution_with_features["source_code_lines"] = len(src_lines)
+                # feature 1 - removed this one 1-5-2026 as I realised its redundant (see sloc in radon features)
+                #src_lines = [l for l in lines if l.strip() and not l.strip().startswith('#')]
+                #solution_with_features["source_code_lines"] = len(src_lines)
                 # feature 6
-                if len(code) > 0:
-                    parens_count = code.count('(') + code.count(')')
-                    solution_with_features["parenthesis_ratio"] = parens_count / len(code)
-                else:
-                    solution_with_features["parenthesis_ratio"] = 0
+                #if len(code) > 0:
+                #    parens_count = code.count('(') + code.count(')')
+                #    solution_with_features["parenthesis_ratio"] = parens_count / len(code)
+                #else:
+                #    solution_with_features["parenthesis_ratio"] = 0
         except Exception as e:
             for key in feature_keys:
                 solution_with_features[key] = None

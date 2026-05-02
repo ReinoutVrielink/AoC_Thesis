@@ -1,8 +1,13 @@
 import json
 import pandas as pd
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
 from feature_analysis import extract_all_features
 import ast
 from clustering import run_kmeans, get_feature_columns
+import numpy as np
+from GraphCodeBert import load_embeddings, generate_all_embeddings
+from clustering import cluster_embeddings_hdbscan
 
 # 20/4/2026
 # Hallo! Dit is mijn eerste file. In deze file inspecteer ik de data om te kijken waarmee ik aan het werken ben
@@ -188,8 +193,32 @@ Total solutions with at least one missing value: 1556 out of 6983
 # loc <-> total_lines:   1.000
 # effort <-> time:   1.000
 # volume <-> bugs:   1.000
-with open('data/combined_features.json', 'r') as f:
-        data = json.load(f)
-df = pd.DataFrame(data)
+
+
+# Trying clustering on the GraphCodeBERT embeddings
+#generate_all_embeddings('data/combined_features.json', 'data/graphcodebert_embeddings.json')
+
+# Load embeddings
+print("Loading embeddings.....")
+df = load_embeddings('data/graphcodebert_embeddings.json')
+ 
+print(f"Loaded {len(df)} total embeddings")
+print(f"Embedding dimension: {len(df['embedding'].iloc[0])}")
+ 
+# Filter by day (optional)
+day_number = 3
+df_day = df[df['day'] == day_number]
+ 
+print(f"\n--- Day {day_number} ---")
+print(f"Loaded {len(df_day)} embeddings")
+print(f"\nFirst few rows:")
+print(df_day[['sol_id', 'author', 'day', 'part']].head())
 df_day = df[df['day'] == 3]
-run_kmeans(df_day, n_clusters=3)
+
+# Cluster with HDBSCAN
+clustered_df = cluster_embeddings_hdbscan(
+    df_day, 
+    min_cluster_size=8, 
+    min_samples=2,
+    visualize=True
+)

@@ -2,7 +2,7 @@ import json
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
-from feature_analysis import extract_all_features
+from feature_analysis import extract_all_features, extract_radon_features, extract_ast_features, extract_lexical_features
 import ast
 from clustering import run_kmeans, get_feature_columns
 import numpy as np
@@ -168,13 +168,15 @@ Total solutions with at least one missing value: 1556 out of 6983
 
 # I want to try a simple k means clustering on top 10 features to see if there are any interesting clusters in the data, but first I need to normalize the features
 # 1-5-2026. testing clustering
+
 #with open('data/combined_features.json', 'r') as f:
 #        data = json.load(f)
-#df = pd.DataFrame(data)
-#df_day = df[df['day'] == 3]
-#first_row = df_day.iloc[0]
-#print(first_row)
-#clustered_all = run_kmeans(df_day, n_clusters=3)
+#df1 = pd.DataFrame(data)
+#df1_day = df1[df1['day'] == 3]
+#first_row = df1_day.iloc[0]
+#
+# print(first_row)
+#clustered_all = run_kmeans(df1_day, n_clusters=3)
 #print("\nCluster distribution:")
 #print(clustered_all['cluster'].value_counts().sort_index())
 
@@ -196,15 +198,14 @@ Total solutions with at least one missing value: 1556 out of 6983
 
 
 # Trying clustering on the GraphCodeBERT embeddings
-#generate_all_embeddings('data/combined_features.json', 'data/graphcodebert_embeddings.json')
-
+#generate_all_embeddings('data/preprocessed_solutions.json', 'data/graphcodebert_embeddings.json')
 # Load embeddings
-print("Loading embeddings.....")
-df = load_embeddings('data/graphcodebert_embeddings.json')
+#print("Loading embeddings.....")
+#df = load_embeddings('data/graphcodebert_embeddings.json')
  
-print(f"Loaded {len(df)} total embeddings")
-print(f"Embedding dimension: {len(df['embedding'].iloc[0])}")
- 
+#print(f"Loaded {len(df)} total embeddings")
+#print(f"Embedding dimension: {len(df['embedding'].iloc[0])}")
+"""
 # Filter by day (optional)
 day_number = 3
 df_day = df[df['day'] == day_number]
@@ -214,7 +215,6 @@ print(f"Loaded {len(df_day)} embeddings")
 print(f"\nFirst few rows:")
 print(df_day[['sol_id', 'author', 'day', 'part']].head())
 df_day = df[df['day'] == 3]
-
 # Cluster with HDBSCAN
 clustered_df = cluster_embeddings_hdbscan(
     df_day, 
@@ -222,3 +222,33 @@ clustered_df = cluster_embeddings_hdbscan(
     min_samples=2,
     visualize=True
 )
+"""
+
+"""
+running clustering on different types of features
+"""
+extract_radon_features()
+extract_ast_features()
+extract_lexical_features()
+extract_all_features()
+with open('data/radon_features.json', 'r') as f:
+        radondata = json.load(f)
+with open('data/ast_features.json', 'r') as f:
+        astdata = json.load(f)
+with open('data/lexical_features.json', 'r') as f:
+        lexicaldata = json.load(f)
+with open('data/combined_features.json', 'r') as f:
+        combineddata = json.load(f)
+radondf = pd.DataFrame(radondata)
+astdf = pd.DataFrame(astdata)
+lexicaldf = pd.DataFrame(lexicaldata)
+combineddf = pd.DataFrame(combineddata)
+radondf_day3 = radondf[radondf['day'] == 3]
+astdf_day3 = astdf[astdf['day'] == 3]
+lexicaldf_day3 = lexicaldf[lexicaldf['day'] == 3]
+combineddf_day3 = combineddf[combineddf['day'] == 3]
+
+clustered_radon = run_kmeans(radondf_day3, n_clusters=3)
+clustered_ast = run_kmeans(astdf_day3, n_clusters=3)
+clustered_lexical = run_kmeans(lexicaldf_day3, n_clusters=3)
+clustered_combined = run_kmeans(combineddf_day3, n_clusters=3)

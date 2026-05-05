@@ -8,6 +8,8 @@ from clustering import run_kmeans, get_feature_columns
 import numpy as np
 from GraphCodeBert import load_embeddings, generate_all_embeddings
 from clustering import cluster_embeddings_hdbscan
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
 
 # 20/4/2026
 # Hallo! Dit is mijn eerste file. In deze file inspecteer ik de data om te kijken waarmee ik aan het werken ben
@@ -224,9 +226,13 @@ clustered_df = cluster_embeddings_hdbscan(
 )
 """
 
-"""
-running clustering on different types of features
-"""
+
+# running clustering on different types of features
+from preprocessing import preprocessing
+from feature_analysis import extract_all_features
+
+#preprocessing()
+
 extract_radon_features()
 extract_ast_features()
 extract_lexical_features()
@@ -247,8 +253,19 @@ radondf_day3 = radondf[radondf['day'] == 3]
 astdf_day3 = astdf[astdf['day'] == 3]
 lexicaldf_day3 = lexicaldf[lexicaldf['day'] == 3]
 combineddf_day3 = combineddf[combineddf['day'] == 3]
-
 clustered_radon = run_kmeans(radondf_day3, n_clusters=3)
 clustered_ast = run_kmeans(astdf_day3, n_clusters=3)
 clustered_lexical = run_kmeans(lexicaldf_day3, n_clusters=3)
 clustered_combined = run_kmeans(combineddf_day3, n_clusters=3)
+
+feature_variance = combineddf_day3.var(numeric_only=True)
+top_features = feature_variance.nlargest(40).index
+print("\nTop 20 features by variance:")
+for feature in top_features:
+    print(f" - {feature}: {feature_variance[feature]}")
+# now i want to look at what the most important features in the clustering were.
+# I want to do this with random forest and SHAP values
+# Calculate variance for each feature in combineddf_day3
+# Plot the distribution of 'effort'
+
+

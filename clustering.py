@@ -1,3 +1,4 @@
+from flask import json
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,7 +9,6 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 import umap
 import hdbscan
-import faiss
  
 def get_feature_columns(df):
     # Extract all numeric feature columns, excluding metadata that is not relevant for clustering
@@ -21,11 +21,31 @@ def run_kmeans(df, n_clusters=2, features=None):
     df = df.copy()
     if features is None:
         features = get_feature_columns(df)
+
     # Remove rows with missing values in selected features
     df = df.dropna(subset=features)
+
     # scaling
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(df[features])
+
+    # 5/5/2026: new - find optimal k using silhouette score
+    # added code is from https://farshadabdulazeez.medium.com/understanding-silhouette-score-in-clustering-8aedc06ce9c4
+    scores = []
+    k_range = range(2, 10)
+
+    for k in k_range:
+        kmeans_tmp = KMeans(n_clusters=k, random_state=42, n_init=10)
+        labels = kmeans_tmp.fit_predict(X_scaled)
+        score = silhouette_score(X_scaled, labels)
+        scores.append(score)
+
+    plt.figure()
+    plt.plot(k_range, scores, marker='o')
+    plt.title("Silhouette Score vs. Number of Clusters")
+    plt.xlabel("Number of Clusters")
+    plt.ylabel("Silhouette Score")
+    plt.show()
     # running k-means
     kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
     df['cluster'] = kmeans.fit_predict(X_scaled)
@@ -38,15 +58,17 @@ def run_kmeans(df, n_clusters=2, features=None):
     pca_data = pca.fit_transform(X_scaled)
     df_pca = pd.DataFrame(pca_data, columns=['PC1', 'PC2'])
     df_pca['cluster'] = df['cluster'].values
-    # Visualization
     plt.figure(figsize=(10, 7))
-    sns.scatterplot(x='PC1', y='PC2', hue='cluster', data=df_pca, palette='viridis', alpha=0.6, s=100)
+    sns.scatterplot(
+        x='PC1', y='PC2', hue='cluster',
+        data=df_pca, palette='viridis',
+        alpha=0.6, s=100
+    )
     plt.title(f'K-means Clustering - {len(features)} features, Silhouette: {sil_score:.3f}')
     plt.xlabel(f'PC1 ({pca.explained_variance_ratio_[0]:.1%})')
     plt.ylabel(f'PC2 ({pca.explained_variance_ratio_[1]:.1%})')
     plt.tight_layout()
     plt.show()
-    
     return df
 
 def cluster_embeddings_hdbscan(df, min_cluster_size=5, min_samples=3, visualize=True):

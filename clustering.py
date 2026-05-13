@@ -1,4 +1,3 @@
-from flask import json
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,14 +20,11 @@ def run_kmeans(df, n_clusters=2, features=None):
     df = df.copy()
     if features is None:
         features = get_feature_columns(df)
-
     # Remove rows with missing values in selected features
     df = df.dropna(subset=features)
-
     # scaling
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(df[features])
-
     # 5/5/2026: new - find optimal k using silhouette score
     # added code is from https://farshadabdulazeez.medium.com/understanding-silhouette-score-in-clustering-8aedc06ce9c4
     scores = []
@@ -59,6 +55,7 @@ def run_kmeans(df, n_clusters=2, features=None):
     df_pca = pd.DataFrame(pca_data, columns=['PC1', 'PC2'])
     df_pca['cluster'] = df['cluster'].values
     plt.figure(figsize=(10, 7))
+    # generated visualization with Gemini, to make visualization more clear and informative
     sns.scatterplot(
         x='PC1', y='PC2', hue='cluster',
         data=df_pca, palette='viridis',
@@ -71,34 +68,68 @@ def run_kmeans(df, n_clusters=2, features=None):
     plt.show()
     return df
 
-def cluster_embeddings_hdbscan(df, min_cluster_size=5, min_samples=3, visualize=True):
-    # cluster embeddings using HDBSCAN + UMAP visualization
+
+def cluster_embeddings_hdbscan(df, min_cluster_size=10, min_samples=3, n_reduce=10, visualize=True):
+    # This function clusters GraphCodeBERT embeddings with HDBSCAN and does UMAP dimensionality reduction
+    # Two separate UMAP projections are used: one for clustering (n_reduce dims, tight packing)
+    # and one for 2D visualization
     df = df.copy()
     X = np.array([emb for emb in df['embedding']])
-    reducer = umap.UMAP(n_components=2, random_state=42, n_neighbors=15, min_dist=0.1)
-    X_umap = reducer.fit_transform(X)
+    # normalizing the embeddings to focus on direction of data rather than magnitude
+    X = normalize(X, norm='l2')
+
+    # UMAP reducer for clustering: squash the many dimensions in the embeddings to 10 dimensions
+    # min_dist=0.0 allows points to pack tightly so HDBSCAN can find dense regions
+    reducer_cluster = umap.UMAP(
+        n_components=n_reduce,
+        n_neighbors=100,
+        min_dist=0.0,
+        metric='cosine',
+        random_state=42,
+    )
+    X_reduced = reducer_cluster.fit_transform(X)
+
+    # Separate UMAP reducer for 2D visualization only.
+    # Not used for clustering itself, since 2D loses too much info for HDBSCAN
+    reducer_viz = umap.UMAP(
+        n_components=2,
+        n_neighbors=15,
+        min_dist=0.1,
+        metric='cosine',
+        random_state=42,
+    )
+    X_umap = reducer_viz.fit_transform(X)
     print("Clustering with HDBSCAN.....")
-    clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples)
-    df['cluster'] = clusterer.fit_predict(X)
-    n_clusters = len(set(df['cluster'])) - (1 if -1 in df['cluster'] else 0)
-    n_outliers = sum(df['cluster'] == -1)
+    clusterer = hdbscan.HDBSCAN(
+        min_cluster_size=min_cluster_size,
+        min_samples=min_samples,
+    )
+    df['cluster'] = clusterer.fit_predict(X_reduced)
+    # Cluster count excludes the outliers that HDBSCAN assigns
+    n_clusters = len(set(df['cluster'])) - (1 if -1 in df['cluster'].values else 0)
+    n_outliers = (df['cluster'] == -1).sum()
     print(f"\nNumber of clusters: {n_clusters}")
-    print(f"Number of outliers: {n_outliers}")
+    print(f"Number of outliers: {n_outliers} / {len(df)}")
     print(f"\nCluster distribution:")
     print(df['cluster'].value_counts().sort_index())
-    # Silhouette score (excluding outliers)
+    # Compute silhouette score only on non-outlier points, and only if there are
+    # at least 2 clusters and 2 points (silhouette is undefined otherwise)
     mask = df['cluster'] != -1
-    if mask.sum() > 1:
-        sil_score = silhouette_score(X[mask], df['cluster'][mask])
+    if mask.sum() > 1 and df.loc[mask, 'cluster'].nunique() > 1:
+        sil_score = silhouette_score(X_reduced[mask], df.loc[mask, 'cluster'])
         print(f"Silhouette Score (excluding outliers): {sil_score:.3f}")
+    # Plot the 2D UMAP projection coloured by cluster assignment.
     if visualize:
+        # generated visualization with Gemini, to make visualization more clear and informative
         plt.figure(figsize=(10, 7))
-        sns.scatterplot(x=X_umap[:, 0], y=X_umap[:, 1], hue=df['cluster'], 
-                        palette='viridis', alpha=0.6, s=100)
+        sns.scatterplot(
+            x=X_umap[:, 0], y=X_umap[:, 1],
+            hue=df['cluster'].astype(str),
+            palette='viridis', alpha=0.6, s=100,
+        )
         plt.xlabel('UMAP 1')
         plt.ylabel('UMAP 2')
-        plt.title(f'GraphCodeBERT Embeddings - HDBSCAN Clustering')
+        plt.title('GraphCodeBERT Embeddings - HDBSCAN Clustering')
         plt.tight_layout()
         plt.show()
-    
     return df

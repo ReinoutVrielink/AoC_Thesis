@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+from sklearn import cluster
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from feature_analysis import extract_all_features, extract_radon_features, extract_ast_features, extract_lexical_features
@@ -78,7 +79,7 @@ z3 (& Python)
 """
 
 # Als ik kijk naar deze output zie ik dat de oplossingen eigenlijk allemaal in python zijn
-# Ik hoef dus niet te filteren!
+# Ik hoef dus niet te filteren! (9-5-2026: hier ben ik later op teruggekomen, er zitten ook oplossingen in python 2 syntax, wat problemen geeft bij het parsen van de code)
 
 # 23-4/2026 - Heb net de preprocessing.py file geschreven, waarin ik de solutions.json file heb opgeschoond en opgesplitst in individuele oplossingen (part1/part2)
 # lege oplossingen heb ik verwijderd. Ik sla deze op in preprocessed_solutions.json. 
@@ -258,14 +259,17 @@ clustered_ast = run_kmeans(astdf_day3, n_clusters=3)
 clustered_lexical = run_kmeans(lexicaldf_day3, n_clusters=3)
 clustered_combined = run_kmeans(combineddf_day3, n_clusters=3)
 
-feature_variance = combineddf_day3.var(numeric_only=True)
-top_features = feature_variance.nlargest(40).index
-print("\nTop 20 features by variance:")
-for feature in top_features:
-    print(f" - {feature}: {feature_variance[feature]}")
-# now i want to look at what the most important features in the clustering were.
-# I want to do this with random forest and SHAP values
-# Calculate variance for each feature in combineddf_day3
-# Plot the distribution of 'effort'
+# also doing some clustering on graphcodebert embeddings
+#generate_all_embeddings('data/preprocessed_solutions.json', 'data/graphcodebert_embeddings.json')
+# Load embeddings
+df = load_embeddings('data/graphcodebert_embeddings.json')
+df = df[df['day'] == 3]
+df['embedding'] = df['embedding'].apply(lambda x: np.array(x))
 
-
+# Now run clustering
+clustered_df = cluster_embeddings_hdbscan(
+    df,
+    min_cluster_size=20,
+    min_samples=5,
+    visualize=True
+)

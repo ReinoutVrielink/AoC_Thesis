@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import torch
 from transformers import AutoTokenizer, AutoModel # https://huggingface.co/microsoft/graphcodebert-base/tree/main?library=transformers
- 
+
 tokenizer = AutoTokenizer.from_pretrained("microsoft/graphcodebert-base")
 model = AutoModel.from_pretrained("microsoft/graphcodebert-base")
  
@@ -52,3 +52,4 @@ def load_embeddings(filepath):
     df['embedding'] = list(np.stack(df['embedding'].values))
     return df
  
+

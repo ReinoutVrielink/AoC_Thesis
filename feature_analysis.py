@@ -331,5 +331,3 @@ def extract_all_features():
     with open('data/combined_features.json', 'w') as f:
         json.dump(final_dataset, f)
     return final_dataset
-
-extract_all_features()

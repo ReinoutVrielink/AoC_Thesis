@@ -11,7 +11,6 @@ from io import BytesIO
 def extract_radon_features():
     with open('data/preprocessed_solutions.json', 'r') as f:
         all_individual_solutions = json.load(f)
-
     solutions_with_features = []
 
     for solution in all_individual_solutions:
@@ -34,16 +33,16 @@ def extract_radon_features():
             # Halstead Metrics
             halstead = h_visit(code)
 
-            # solution_with_features["h1"] = halstead.total.h1
-            # solution_with_features["h2"] = halstead.total.h2
-            # solution_with_features["N1"] = halstead.total.N1
-            # solution_with_features["N2"] = halstead.total.N2
-            # solution_with_features["vocabulary"] = halstead.total.vocabulary
-            # solution_with_features["length"] = halstead.total.length
-            # solution_with_features["calculated_length"] = halstead.total.calculated_length
+            solution_with_features["h1"] = halstead.total.h1
+            solution_with_features["h2"] = halstead.total.h2
+            #solution_with_features["N1"] = halstead.total.N1
+            #solution_with_features["N2"] = halstead.total.N2
+            #solution_with_features["vocabulary"] = halstead.total.vocabulary
+            #solution_with_features["length"] = halstead.total.length
+            #solution_with_features["calculated_length"] = halstead.total.calculated_length
             #solution_with_features["volume"] = halstead.total.volume
-            # solution_with_features["difficulty"] = halstead.total.difficulty
-            # solution_with_features["effort"] = halstead.total.effort
+            solution_with_features["difficulty"] = halstead.total.difficulty
+            #solution_with_features["effort"] = halstead.total.effort
 
             # maintainability index
             mi_score = mi_visit(code, multi=False)
@@ -54,13 +53,13 @@ def extract_radon_features():
 
             solution_with_features["sloc"] = raw_metrics.sloc  # Source lines of code
 
-            # solution_with_features["loc"] = raw_metrics.loc
-            # solution_with_features["lloc"] = raw_metrics.lloc
+            #solution_with_features["loc"] = raw_metrics.loc
+            #solution_with_features["lloc"] = raw_metrics.lloc
 
-            # solution_with_features["comments_count"] = raw_metrics.comments
-            # solution_with_features["multi_strings"] = raw_metrics.multi
-            # solution_with_features["blank_lines"] = raw_metrics.blank
-            # solution_with_features["single_comments"] = raw_metrics.single_comments
+            solution_with_features["comments_count"] = raw_metrics.comments
+            solution_with_features["multi_strings"] = raw_metrics.multi
+            solution_with_features["blank_lines"] = raw_metrics.blank
+            solution_with_features["single_comments"] = raw_metrics.single_comments
 
             # removed both avg line length and max line length. they are both already in the lexical features
 
@@ -75,25 +74,25 @@ def extract_radon_features():
             solution_with_features["avg_function_complexity"] = None
             solution_with_features["num_functions"] = None
 
-            # solution_with_features["h1"] = None
-            # solution_with_features["h2"] = None
-            # solution_with_features["N1"] = None
-            # solution_with_features["N2"] = None
-            # solution_with_features["vocabulary"] = None
-            # solution_with_features["length"] = None
-            # solution_with_features["calculated_length"] = None
+            solution_with_features["h1"] = None
+            solution_with_features["h2"] = None
+            #solution_with_features["N1"] = None
+            #solution_with_features["N2"] = None
+            #solution_with_features["vocabulary"] = None
+            #solution_with_features["length"] = None
+            #solution_with_features["calculated_length"] = None
             #solution_with_features["volume"] = None
-            # solution_with_features["difficulty"] = None
-            # solution_with_features["effort"] = None
+            solution_with_features["difficulty"] = None
+            #solution_with_features["effort"] = None
 
             solution_with_features["sloc"] = None
-            # solution_with_features["loc"] = None
-            # solution_with_features["lloc"] = None
+            #solution_with_features["loc"] = None
+            #solution_with_features["lloc"] = None
 
-            # solution_with_features["comments_count"] = None
-            # solution_with_features["multi_strings"] = None
-            # solution_with_features["blank_lines"] = None
-            # solution_with_features["single_comments"] = None
+            solution_with_features["comments_count"] = None
+            solution_with_features["multi_strings"] = None
+            solution_with_features["blank_lines"] = None
+            solution_with_features["single_comments"] = None
 
             solution_with_features["maintainability_index"] = None
 
@@ -192,15 +191,15 @@ def extract_lexical_features():
     feature_keys = [
         #"source_code_lines",      # 1.
         "max_line_length",        # 2.
-        #"total_lines",            # 3.
+        "total_lines",            # 3.
         #"parenthesis_ratio",      # 6. 
         # 1/5/2026. commented out both parenthesis ratio (variance of 0.00), source code lines and total lines (both redundant)
-        "avg_line_length",        # 9.
+        #"avg_line_length",        # 9. drop bcs of high correlation
     ]
     # 4/5/2026: I also added a bunch of token-level stylometry features that are inspired by the paper by Biel et al. (2023) and the thesis by Sams et al. (2025)
     # these features focus on keyword preferences, operator patterns, and built-in function usage
-    keywords = {'if', 'elif', 'else', 'for', 'while', 'break', 'continue', 'try', 'except', 'finally', 
-                'def', 'class', 'lambda', 'return', 'yield', 'import', 'from', 'as', 'with', 'and', 'or', 'not'}
+    keywords = {'if', 'elif', 'else', 'for', 'while', 'break', 'continue', 'try', 
+                 'class', 'lambda', 'return', 'yield', 'import', 'from', 'as', 'with', 'and', 'or', 'not'}
     builtins = {'range', 'enumerate', 'zip', 'map', 'filter', 'len', 'sum', 'min', 'max', 'sorted', 
                 'int', 'str', 'float', 'list', 'dict', 'set', 'tuple', 'print', 'input', 'all', 'any'}
     arithmetic_ops = {'+', '-', '*', '/', '//', '%', '**'}
@@ -217,8 +216,8 @@ def extract_lexical_features():
             else:
                 # Features 2, 3, 9
                 line_lengths = [len(l) for l in lines]
-                #solution_with_features["total_lines"] = len(lines)
-                #solution_with_features["max_line_length"] = max(line_lengths)
+                solution_with_features["total_lines"] = len(lines)
+                solution_with_features["max_line_length"] = max(line_lengths)
                 #solution_with_features["avg_line_length"] = sum(line_lengths) / len(lines)
             # Token-level stylometry extraction
             lines_of_code = len(lines)
@@ -253,16 +252,16 @@ def extract_lexical_features():
             if total_kw > 0:
                 conditionals = kw_counts['if'] + kw_counts['elif'] + kw_counts['else']
                 loops = kw_counts['for'] + kw_counts['while']
-                functions = kw_counts['def'] + kw_counts['lambda']
+                #functions = kw_counts['def'] + kw_counts['lambda']
                 solution_with_features['conditional_preference'] = conditionals / (conditionals + loops) if (conditionals + loops) > 0 else 0
                 solution_with_features['for_over_while'] = kw_counts['for'] / loops if loops > 0 else 0
-                solution_with_features['lambda_ratio'] = kw_counts['lambda'] / functions if functions > 0 else 0
-                solution_with_features['error_handling_ratio'] = (kw_counts['try'] + kw_counts['except']) / total_kw
+                #solution_with_features['lambda_ratio'] = kw_counts['lambda'] / functions if functions > 0 else 0
+                #solution_with_features['error_handling_ratio'] = (kw_counts['try'] + kw_counts['except']) / total_kw
             else:
                 solution_with_features['conditional_preference'] = 0
                 solution_with_features['for_over_while'] = 0
-                solution_with_features['lambda_ratio'] = 0
-                solution_with_features['error_handling_ratio'] = 0
+                #solution_with_features['lambda_ratio'] = 0
+                #solution_with_features['error_handling_ratio'] = 0
             # storing built-in counts and ratios
             for bf, count in builtin_counts.items():
                 solution_with_features[f'builtin_{bf}'] = count
@@ -290,7 +289,7 @@ def extract_lexical_features():
                 solution_with_features[f'kw_{kw}'] = None
             for bf in builtins:
                 solution_with_features[f'builtin_{bf}'] = None
-            for key in ['conditional_preference', 'for_over_while', 'lambda_ratio', 'error_handling_ratio',
+            for key in ['conditional_preference', 'for_over_while',
                        'iteration_builtins_ratio', 'enumerate_over_range', 'op_arithmetic_ratio', 
                        'op_comparison_ratio', 'keywords_per_line', 'builtins_per_line']:
                 solution_with_features[key] = None
@@ -331,3 +330,29 @@ def extract_all_features():
     with open('data/combined_features.json', 'w') as f:
         json.dump(final_dataset, f)
     return final_dataset
+
+def combine_astandradon_features():
+    radon_data = extract_radon_features()
+    ast_data = extract_ast_features()
+    combined_map = {}
+    def merge_into_map(dataset):
+        for entry in dataset:
+            sid = entry['sol_id']
+            if sid not in combined_map:
+                combined_map[sid] = {
+                    "sol_id": sid,
+                    "author": entry.get("author"),
+                    "year": entry.get("year"),
+                    "day": entry.get("day"),
+                    "part": entry.get("part"),
+                    "code": entry.get("code"),
+                    "language": entry.get("language")
+                }
+            combined_map[sid].update(entry)
+    merge_into_map(radon_data)
+    merge_into_map(ast_data)
+    print("Combined radon and AST features")
+    astandradon_dataset = list(combined_map.values())
+    with open('data/astandradon_features.json', 'w') as f:
+        json.dump(astandradon_dataset, f)
+    return astandradon_dataset

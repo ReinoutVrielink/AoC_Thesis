@@ -8,6 +8,9 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 import umap
 import hdbscan
+import warnings
+# Getting rid of all the umap warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="umap")
  
 def get_feature_columns(df):
     # Extract all numeric feature columns, excluding metadata that is not relevant for clustering
@@ -69,15 +72,13 @@ def run_kmeans(df, n_clusters=2, features=None):
     return df
 
 
-def cluster_embeddings_hdbscan(df, min_cluster_size=10, min_samples=3, n_reduce=10, visualize=True):
+def cluster_embeddings_hdbscan(df, min_cluster_size=10, min_samples=3, n_reduce=10, visualize=True, verbose=True):
     # This function clusters GraphCodeBERT embeddings with HDBSCAN and does UMAP dimensionality reduction
     # Two separate UMAP projections are used: one for clustering (n_reduce dims, tight packing)
     # and one for 2D visualization
     df = df.copy()
     X = np.array([emb for emb in df['embedding']])
-    # normalizing the embeddings to focus on direction of data rather than magnitude
     X = normalize(X, norm='l2')
-
     # UMAP reducer for clustering: squash the many dimensions in the embeddings to 10 dimensions
     # min_dist=0.0 allows points to pack tightly so HDBSCAN can find dense regions
     reducer_cluster = umap.UMAP(
@@ -88,9 +89,6 @@ def cluster_embeddings_hdbscan(df, min_cluster_size=10, min_samples=3, n_reduce=
         random_state=42,
     )
     X_reduced = reducer_cluster.fit_transform(X)
-
-    # Separate UMAP reducer for 2D visualization only.
-    # Not used for clustering itself, since 2D loses too much info for HDBSCAN
     reducer_viz = umap.UMAP(
         n_components=2,
         n_neighbors=15,
@@ -99,28 +97,29 @@ def cluster_embeddings_hdbscan(df, min_cluster_size=10, min_samples=3, n_reduce=
         random_state=42,
     )
     X_umap = reducer_viz.fit_transform(X)
-    print("Clustering with HDBSCAN.....")
+    if verbose:
+        print("Clustering with HDBSCAN.....")
     clusterer = hdbscan.HDBSCAN(
         min_cluster_size=min_cluster_size,
         min_samples=min_samples,
     )
     df['cluster'] = clusterer.fit_predict(X_reduced)
-    # Cluster count excludes the outliers that HDBSCAN assigns
     n_clusters = len(set(df['cluster'])) - (1 if -1 in df['cluster'].values else 0)
     n_outliers = (df['cluster'] == -1).sum()
-    print(f"\nNumber of clusters: {n_clusters}")
-    print(f"Number of outliers: {n_outliers} / {len(df)}")
-    print(f"\nCluster distribution:")
-    print(df['cluster'].value_counts().sort_index())
+    if verbose:
+        print(f"\nNumber of clusters: {n_clusters}")
+        print(f"Number of outliers: {n_outliers} / {len(df)}")
+        print(f"\nCluster distribution:")
+        print(df['cluster'].value_counts().sort_index())
     # Compute silhouette score only on non-outlier points, and only if there are
     # at least 2 clusters and 2 points (silhouette is undefined otherwise)
     mask = df['cluster'] != -1
     if mask.sum() > 1 and df.loc[mask, 'cluster'].nunique() > 1:
         sil_score = silhouette_score(X_reduced[mask], df.loc[mask, 'cluster'])
-        print(f"Silhouette Score (excluding outliers): {sil_score:.3f}")
-    # Plot the 2D UMAP projection coloured by cluster assignment.
+        if verbose:
+            print(f"Silhouette Score (excluding outliers): {sil_score:.3f}")
+    # generated visualization with Gemini, to make visualization more clear and informative  
     if visualize:
-        # generated visualization with Gemini, to make visualization more clear and informative
         plt.figure(figsize=(10, 7))
         sns.scatterplot(
             x=X_umap[:, 0], y=X_umap[:, 1],
@@ -132,4 +131,42 @@ def cluster_embeddings_hdbscan(df, min_cluster_size=10, min_samples=3, n_reduce=
         plt.title('GraphCodeBERT Embeddings - HDBSCAN Clustering')
         plt.tight_layout()
         plt.show()
+    return df
+
+def cluster_embeddings_per_puzzle(df, min_puzzle_size=25, min_cluster_size=5, min_samples=3):
+    # this function clusters the graphcodebert embeddings per puzzle instead of once for all data provided
+    # working with min_cluster size 5 to get meaningful clusters in puzzles with at least 25 solutions
+    df = df.copy()
+    df['puzzle'] = (
+        df['year'].astype(str) + '_' +
+        df['day'].astype(str) + '_' +
+        df['part'].astype(str)
+    )
+    # Keep only puzzles with enough solutions to cluster on a meaningful amount of data
+    sizes = df.groupby('puzzle').size()
+    keep = sizes[sizes >= min_puzzle_size].index
+    df = df[df['puzzle'].isin(keep)].copy()
+    print(f"Clustering within {len(keep)} puzzles ({len(df)} solutions)... Please wait.")
+    
+    df['local_cluster'] = -1
+    df['global_cluster_id'] = -1
+    next_id = 0
+    
+    for puzzle, group in df.groupby('puzzle'):
+        # Added verbose=False here to stop the spamming
+        labels = cluster_embeddings_hdbscan(
+            group,
+            min_cluster_size=min_cluster_size,
+            min_samples=min_samples,
+            visualize=False,
+            verbose=False, 
+        )['cluster'].values
+        
+        df.loc[group.index, 'local_cluster'] = labels
+        for c in sorted(set(labels)):
+            if c == -1:
+                continue
+            mask = (df.index.isin(group.index)) & (df['local_cluster'] == c)
+            df.loc[mask, 'global_cluster_id'] = next_id
+            next_id += 1     
     return df

@@ -5,7 +5,7 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from feature_analysis import extract_all_features, extract_radon_features, extract_ast_features, extract_lexical_features, combine_astandradon_features
 import ast
-from clustering import run_kmeans, get_feature_columns
+from clustering import run_kmeans, get_feature_columns, cluster_embeddings_per_puzzle
 import numpy as np
 from GraphCodeBert import load_embeddings, generate_all_embeddings
 from clustering import cluster_embeddings_hdbscan
@@ -231,7 +231,7 @@ clustered_df = cluster_embeddings_hdbscan(
 # running clustering on different types of features
 from preprocessing import preprocessing
 from feature_analysis import extract_all_features
-
+from clusteringanalysis import author_consistency
 #preprocessing()
 """
 extract_radon_features()
@@ -269,21 +269,77 @@ clustered_astandradon_day3 = run_kmeans(astandradon_df_day3, n_clusters=4)
 #generate_all_embeddings('data/preprocessed_solutions.json', 'data/graphcodebert_embeddings.json')
 # Load embeddings
 
-"""
+
 df = load_embeddings('data/graphcodebert_embeddings.json')
 df_day3 = df[df['day'] == 3]
-df['embedding'] = df['embedding'].apply(lambda x: np.array(x))
+df_day4 = df[df['day'] == 4]
+df_day5 = df[df['day'] == 5]
+df_day6 = df[df['day'] == 6]
+clustered_df = cluster_embeddings_hdbscan(
+    df,
+    min_cluster_size=20,
+    min_samples=3,
+    visualize=True
+)
 
+df['embedding'] = df['embedding'].apply(lambda x: np.array(x))
 # Now run clustering
 clustered_df = cluster_embeddings_hdbscan(
     df,
     min_cluster_size=20,
-    min_samples=5,
+    min_samples=3,
     visualize=True
 )
+
 clustered_df_day3 = cluster_embeddings_hdbscan(
     df_day3,
     min_cluster_size=20,
     min_samples=5,
     visualize=True
+)
+
+clustered_df_day4 = cluster_embeddings_hdbscan(
+    df_day4,
+    min_cluster_size=20,
+    min_samples=5,
+    visualize=True
+)
+clustered_df_day5 = cluster_embeddings_hdbscan(
+    df_day5,
+    min_cluster_size=20,
+    min_samples=5,
+    visualize=True
+)
+clustered_df_day6 = cluster_embeddings_hdbscan(
+    df_day6,
+    min_cluster_size=20,
+    min_samples=5,
+    visualize=True
+)
+"""
+
+from GraphCodeBert import load_embeddings
+from clustering import cluster_embeddings_per_puzzle
+from clusteringanalysis import within_puzzle_zscore
+from clustering import get_feature_columns
+from persona_aggregation import aggregate_local_clusters_to_personas
+import pandas as pd, json
+import numpy as np
+
+df_emb = load_embeddings('data/graphcodebert_embeddings.json')
+df_emb['embedding'] = df_emb['embedding'].apply(lambda x: np.array(x))
+df_local = cluster_embeddings_per_puzzle(
+    df_emb, min_puzzle_size=15, min_cluster_size=5, min_samples=3,
+)
+with open('data/combined_features.json') as f:
+    df_feat = pd.DataFrame(json.load(f))
+features = get_feature_columns(df_feat)
+df_norm, _ = within_puzzle_zscore(df_feat, features)
+
+profiles, persona_labels = aggregate_local_clusters_to_personas(
+    df_local=df_local,
+    df_norm=df_norm,
+    features=features,
+    k_range=range(2, 9),
+    final_k=4,
 )

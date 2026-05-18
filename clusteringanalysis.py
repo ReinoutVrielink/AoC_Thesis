@@ -48,22 +48,23 @@ def author_consistency(df_with_labels, min_solutions=10):
     return consistency_df
 
 
-if __name__ == "__main__":
-    N_CLUSTERS = 2  # 2 was taken from earlier silhouette analysis
-    with open('data/combined_features.json', 'r') as f:
-        df = pd.DataFrame(json.load(f))
+def run_handcrafted_clustering_analysis(df, n_clusters=2, min_solutions=10, min_group_size=10):
     features = get_feature_columns(df)
     print(f"Loaded {len(df)} solutions, {len(features)} features\n")
-    df_norm, df_orig = within_puzzle_zscore(df, features)
+    
+    df_norm, df_orig = within_puzzle_zscore(df, features, min_group_size=min_group_size)
     X = df_norm[features].values
+    
     # i dont use kmeans function from clustering.py here, because I want to do some additional analysis and visualization that is not in that function
-    km = KMeans(n_clusters=N_CLUSTERS, random_state=42, n_init=10)
+    km = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
     labels = km.fit_predict(X)
     sil = silhouette_score(X, labels)
-    print(f"\nK-means (k={N_CLUSTERS}): silhouette = {sil:.3f}")
+    print(f"\nK-means (k={n_clusters}): silhouette = {sil:.3f}")
     print(f"Cluster sizes: {sorted(Counter(labels).items())}")
+    
     clustered_df = df_orig.copy()
     clustered_df['cluster'] = labels
+
     # PCA visualization, made by Claude
     pca = PCA(n_components=2, random_state=42)
     coords = pca.fit_transform(X)
@@ -72,12 +73,24 @@ if __name__ == "__main__":
                     palette='viridis', alpha=0.5, s=30)
     plt.xlabel(f'PC1 ({pca.explained_variance_ratio_[0]:.1%})')
     plt.ylabel(f'PC2 ({pca.explained_variance_ratio_[1]:.1%})')
-    plt.title(f'Global K-means clusters (k={N_CLUSTERS})')
+    plt.title(f'Global K-means clusters (k={n_clusters})')
     plt.tight_layout()
     plt.show()
+    
     # cluster profiles on original scale
     pd.set_option('display.max_rows', None)
     profile = clustered_df.groupby('cluster')[features].mean()
     print("\nCluster profiles (original feature values):")
     print(profile.T.round(2))
-    consistency_df = author_consistency(clustered_df, min_solutions=10)
+    
+    consistency_df = author_consistency(clustered_df, min_solutions=min_solutions)
+    
+    return clustered_df, consistency_df
+
+
+if __name__ == "__main__":
+    # 2 was taken from earlier silhouette analysis
+    N_CLUSTERS = 2  
+    with open('data/combined_features.json', 'r') as f:
+        df = pd.DataFrame(json.load(f))
+    run_handcrafted_clustering_analysis(df, n_clusters=N_CLUSTERS)

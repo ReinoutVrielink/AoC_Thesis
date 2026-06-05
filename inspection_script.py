@@ -5,13 +5,19 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from feature_analysis import extract_all_features, extract_radon_features, extract_ast_features, extract_lexical_features, combine_astandradon_features
 import ast
-from clustering import run_kmeans, get_feature_columns, cluster_embeddings_per_puzzle
 import numpy as np
 from GraphCodeBert import load_embeddings, generate_all_embeddings
 from clustering import cluster_embeddings_hdbscan
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import StandardScaler
-
+from sklearn.preprocessing import StandardScaler, normalize
+import seaborn as sns
+from clustering import run_kmeans
+from GraphCodeBert import load_embeddings
+from clustering import cluster_embeddings_per_puzzle, get_feature_columns, cluster_embeddings_hdbscan
+from clusteringanalysis import within_puzzle_zscore, run_handcrafted_clustering_analysis, compare_clusterings, author_consistency, author_consistency_score, add_puzzle_column, consistency_with_baseline, puzzle_dominance
+from persona_aggregation import aggregate_local_clusters_to_personas
+import warnings
+warnings.simplefilter("ignore", category=FutureWarning)
 # 20/4/2026
 # Hallo! Dit is mijn eerste file. In deze file inspecteer ik de data om te kijken waarmee ik aan het werken ben
 
@@ -239,6 +245,7 @@ extract_ast_features()
 extract_lexical_features()
 extract_all_features()
 combine_astandradon_features()
+"""
 with open('data/radon_features.json', 'r') as f:
         radondata = json.load(f)
 with open('data/ast_features.json', 'r') as f:
@@ -254,6 +261,7 @@ astdf = pd.DataFrame(astdata)
 lexicaldf = pd.DataFrame(lexicaldata)
 astandradon_df = pd.DataFrame(astandradon_data)
 combineddf = pd.DataFrame(combineddata)
+"""
 radondf_day3 = radondf[radondf['day'] == 3]
 astdf_day3 = astdf[astdf['day'] == 3]
 lexicaldf_day3 = lexicaldf[lexicaldf['day'] == 3]
@@ -265,6 +273,7 @@ clustered_lexical = run_kmeans(lexicaldf, n_clusters=4)
 clustered_combined = run_kmeans(combineddf, n_clusters=4)
 clustered_astandradon = run_kmeans(astandradon_df, n_clusters=4)
 clustered_astandradon_day3 = run_kmeans(astandradon_df_day3, n_clusters=4)
+
 # also doing some clustering on graphcodebert embeddings
 #generate_all_embeddings('data/preprocessed_solutions.json', 'data/graphcodebert_embeddings.json')
 # Load embeddings
@@ -317,29 +326,140 @@ clustered_df_day6 = cluster_embeddings_hdbscan(
     visualize=True
 )
 """
+"""
+results = []
+for n_components in [2, 4, 6, 8, 10]:
+    df_local = cluster_embeddings_per_puzzle(
+        df_emb,
+        min_puzzle_size=15,
+        min_cluster_size=5,
+        min_samples=3,
+        n_reduce=n_components,
+    )
+    # compute mean silhouette score across all puzzles
+    silhouette_scores = []
+    for puzzle, group in df_local.groupby('puzzle'):
+        # only puzzles with at least 2 clusters and enough non-outlier points
+        non_outliers = group[group['local_cluster'] != -1]
+        if non_outliers['local_cluster'].nunique() < 2 or len(non_outliers) < 10:
+            continue
+        embeddings = np.stack(non_outliers['embedding'].values)
+        labels = non_outliers['local_cluster'].values
+        score = silhouette_score(embeddings, labels)
+        silhouette_scores.append(score)
+    mean_sil = np.mean(silhouette_scores)
+    print(f"n_components={n_components}: mean silhouette={mean_sil:.3f} "
+          f"(over {len(silhouette_scores)} puzzles)")
+    results.append({'n_components': n_components, 'mean_silhouette': mean_sil})
 
-from GraphCodeBert import load_embeddings
-from clustering import cluster_embeddings_per_puzzle
-from clusteringanalysis import within_puzzle_zscore
-from clustering import get_feature_columns
-from persona_aggregation import aggregate_local_clusters_to_personas
-import pandas as pd, json
-import numpy as np
+results_df = pd.DataFrame(results)
+print("\nSummary:")
+print(results_df.to_string(index=False))
+"""
+"""
+# 2-6-2026 - comparing global HDBSCAN under different settings
+df_emb = load_embeddings('data/graphcodebert_embeddings.json')
+df_emb['embedding'] = df_emb['embedding'].apply(lambda x: np.array(x))
 
+settings = [
+    {'min_cluster_size': 10, 'min_samples': 3, 'n_reduce': 10},
+    {'min_cluster_size': 20, 'min_samples': 5, 'n_reduce': 10},
+    {'min_cluster_size': 30, 'min_samples': 4, 'n_reduce': 10},
+    {'min_cluster_size': 20, 'min_samples': 10, 'n_reduce': 10},
+    {'min_cluster_size': 50, 'min_samples': 3, 'n_reduce': 10},
+]
+
+for s in settings:
+    print(f"\nglobal hdbscan with {s}")
+    cluster_embeddings_hdbscan(
+        df_emb,
+        min_cluster_size=s['min_cluster_size'],
+        min_samples=s['min_samples'],
+        n_reduce=s['n_reduce'],
+        visualize=False,
+    )
+"""
+"""
+combineddf = pd.DataFrame(combineddata)
 df_emb = load_embeddings('data/graphcodebert_embeddings.json')
 df_emb['embedding'] = df_emb['embedding'].apply(lambda x: np.array(x))
 df_local = cluster_embeddings_per_puzzle(
-    df_emb, min_puzzle_size=15, min_cluster_size=5, min_samples=3,
+    df_emb, min_puzzle_size=15, min_cluster_size=5, min_samples=3, n_reduce=10
 )
-with open('data/combined_features.json') as f:
-    df_feat = pd.DataFrame(json.load(f))
-features = get_feature_columns(df_feat)
-df_norm, _ = within_puzzle_zscore(df_feat, features)
+features = get_feature_columns(combineddf)
+df_norm, _ = within_puzzle_zscore(combineddf, features, min_group_size=25)
 
-profiles, persona_labels = aggregate_local_clusters_to_personas(
-    df_local=df_local,
-    df_norm=df_norm,
-    features=features,
-    k_range=range(2, 9),
-    final_k=4,
-)
+for k in (2, 4):
+    print(f"\nRQ1 comparison at k={k}")
+    km_df, _ = run_handcrafted_clustering_analysis(
+        combineddf, n_clusters=k, min_solutions=10, min_group_size=25
+    )
+    profiles, _ = aggregate_local_clusters_to_personas(
+        df_local=df_local, df_norm=df_norm, features=features,
+        k_range=range(2, 9), final_k=k
+    )
+    persona_map = profiles['persona'].to_dict()
+    df_local_k = df_local.copy()
+    df_local_k['persona'] = df_local_k['global_cluster_id'].map(persona_map)
+    ward_for_compare = df_local_k.dropna(subset=['persona'])[['sol_id', 'persona']].copy()
+    ward_for_compare['persona'] = ward_for_compare['persona'].astype(int)
+
+    compare_clusterings(km_df, ward_for_compare, label_col_ward='persona')
+"""
+
+warnings.simplefilter("ignore", category=FutureWarning)
+
+combineddf = pd.DataFrame(json.load(open('data/combined_features.json')))
+astandradon_df = pd.DataFrame(json.load(open('data/astandradon_features.json')))
+
+clustered_dfk2, _ = run_handcrafted_clustering_analysis(
+    df=combineddf, n_clusters=2, min_solutions=10, min_group_size=15)
+clustered_dfk4, _ = run_handcrafted_clustering_analysis(
+    df=combineddf, n_clusters=4, min_solutions=10, min_group_size=15)
+
+run_handcrafted_clustering_analysis(
+    df=astandradon_df, n_clusters=2, min_solutions=10, min_group_size=15)
+run_handcrafted_clustering_analysis(
+    df=astandradon_df, n_clusters=4, min_solutions=10, min_group_size=15)
+
+df_emb = load_embeddings('data/graphcodebert_embeddings.json')
+df_local = cluster_embeddings_per_puzzle(
+    df_emb, min_puzzle_size=15, min_cluster_size=5, min_samples=3, n_reduce=10)
+
+features = get_feature_columns(combineddf)
+df_norm, _ = within_puzzle_zscore(combineddf, features, min_group_size=15)
+
+profilesk2, _ = aggregate_local_clusters_to_personas(
+    df_local=df_local, df_norm=df_norm, features=features, k_range=range(2, 9), final_k=2)
+profilesk4, _ = aggregate_local_clusters_to_personas(
+    df_local=df_local, df_norm=df_norm, features=features, k_range=range(2, 9), final_k=4)
+
+# K-means robustness
+for name, cdf in [('k=2', clustered_dfk2), ('k=4', clustered_dfk4)]:
+    real, n_auth, base = consistency_with_baseline(cdf, 'cluster')
+    dom = puzzle_dominance(cdf, 'cluster')
+    print(f"\nK-means {name}")
+    print(f"Author consistency: real={real}, baseline={base}, gap={real-base} (n_authors={n_auth})")
+    print(f"Puzzle dominance: mean={dom['mean']}, median={dom['median']}, "f"max={dom['max']}, >0.80: {dom['n_above_080']}/{dom['n_puzzles']}")
+
+# Ward robustness
+meta = df_emb[['sol_id', 'author', 'year', 'day', 'part']]
+for k, profiles in [(2, profilesk2), (4, profilesk4)]:
+    dlk = df_local.copy()
+    dlk['persona'] = dlk['global_cluster_id'].map(profiles['persona'].to_dict())
+    dlk = dlk.dropna(subset=['persona'])
+    dlk['persona'] = dlk['persona'].astype(int)
+    labeled = dlk[['sol_id', 'persona']].merge(meta, on='sol_id')
+
+    real, n_auth, base = consistency_with_baseline(labeled, 'persona')
+    dom = puzzle_dominance(labeled, 'persona')
+    print(f"\nWard k={k}")
+    print(f"Author consistency: real={real:.3f}, baseline={base:.3f}, gap={real-base:+.3f} (n_authors={n_auth})")
+    print(f"Puzzle dominance: mean={dom['mean']:.3f}, median={dom['median']:.3f}, "
+          f"max={dom['max']:.3f}, >0.80: {dom['n_above_080']}/{dom['n_puzzles']}")
+
+# ARI / AMI + contingency
+for k, profiles, cdf in [(2, profilesk2, clustered_dfk2), (4, profilesk4, clustered_dfk4)]:
+    ward = df_local[df_local['global_cluster_id'] != -1].copy()
+    ward['persona'] = ward['global_cluster_id'].map(profiles['persona'])
+    compare_clusterings(cdf, ward, label_col_ward='persona')

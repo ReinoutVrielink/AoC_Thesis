@@ -133,7 +133,7 @@ def cluster_embeddings_hdbscan(df, min_cluster_size=10, min_samples=3, n_reduce=
         plt.show()
     return df
 
-def cluster_embeddings_per_puzzle(df, min_puzzle_size=25, min_cluster_size=5, min_samples=3):
+def cluster_embeddings_per_puzzle(df, min_puzzle_size=25, min_cluster_size=5, min_samples=3, n_reduce=10):
     # this function clusters the graphcodebert embeddings per puzzle instead of once for all data provided
     # working with min_cluster size 5 to get meaningful clusters in puzzles with at least 25 solutions
     df = df.copy()
@@ -158,15 +158,16 @@ def cluster_embeddings_per_puzzle(df, min_puzzle_size=25, min_cluster_size=5, mi
             group,
             min_cluster_size=min_cluster_size,
             min_samples=min_samples,
+            n_reduce=n_reduce,
             visualize=False,
             verbose=False, 
         )['cluster'].values
         
         df.loc[group.index, 'local_cluster'] = labels
-        for c in sorted(set(labels)):
-            if c == -1:
+        for local_label in sorted(set(labels)):
+            if local_label == -1: # if outlier, skip
                 continue
-            mask = (df.index.isin(group.index)) & (df['local_cluster'] == c)
+            mask = (df.index.isin(group.index)) & (df['local_cluster'] == local_label)
             df.loc[mask, 'global_cluster_id'] = next_id
             next_id += 1     
     return df

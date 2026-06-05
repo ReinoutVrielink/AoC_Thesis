@@ -1,6 +1,6 @@
 import json
 import ast
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 # 5/5/2026: Changed preprocessing function as it let through python2 code and many other invalid solutions
 # These invalid solutions resulted in errors and NaN values in the feature extraction phase
@@ -70,6 +70,7 @@ def preprocessing():
 def validate_preprocessed_data(filepath='data/preprocessed_solutions.json'):
     # Addition at 5/5/2026: validating the preprocessed data for quality and completeness before moving on to feature extraction and clustering
     # *I created this function with the help of Claude
+    # not a pipeline step, just run manually once to sanity-check the preprocessed data in the beginning of the project
     print(f"\nValidating preprocessed data from {filepath}...")
     with open(filepath, 'r') as f:
         preprocessed = json.load(f)
@@ -96,13 +97,11 @@ def validate_preprocessed_data(filepath='data/preprocessed_solutions.json'):
     # Distribution by day
     days = [s['day'] for s in preprocessed]
     print(f"\n  Solutions per day:")
-    from collections import Counter
     day_counts = Counter(days)
     for day in sorted(day_counts.keys())[:10]:  # Show first 10 days
         print(f"    Day {day}: {day_counts[day]} solutions")
     # Distribution by part
     parts = [s['part'] for s in preprocessed]
-    from collections import Counter
     part_counts = Counter(parts)
     for part in sorted(part_counts.keys()):
         print(f"    {part}: {part_counts[part]} solutions")

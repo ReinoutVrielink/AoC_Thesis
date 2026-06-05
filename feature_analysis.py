@@ -201,7 +201,7 @@ def extract_lexical_features():
     keywords = {'if', 'elif', 'else', 'for', 'while', 'break', 'continue', 'try', 
                  'class', 'lambda', 'return', 'yield', 'import', 'from', 'as', 'with', 'and', 'or', 'not'}
     builtins = {'range', 'enumerate', 'zip', 'map', 'filter', 'len', 'sum', 'min', 'max', 'sorted', 
-                'int', 'str', 'float', 'list', 'dict', 'set', 'tuple', 'print', 'input', 'all', 'any'}
+                'int', 'str', 'list', 'dict', 'set', 'tuple', 'print', 'input', 'all', 'any'}
     arithmetic_ops = {'+', '-', '*', '/', '//', '%', '**'}
     comparison_ops = {'==', '!=', '<', '>', '<=', '>='}
 
@@ -300,9 +300,6 @@ def extract_lexical_features():
     return solutions_with_features
 
 # Combine all features into one dataset
-# I don't think this is the most effective way to do the analysis but for now I keep it
-# I did it this way because I just started this script by doing the radon features and ast features in seperate functions
-# and then I thought it would be easy to just merge the three datasets together in a separate function
 def extract_all_features():
     radon_data = extract_radon_features()
     ast_data = extract_ast_features()
